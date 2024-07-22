@@ -45,7 +45,7 @@ class MyDataset(Dataset):
         # 获取图片标签 0-猫 1-狗
         img_labels = [0 if n.startswith('cat') else 1 for n in img_names]
         # 分割数据集
-        split_idx = [int(len(img_labels) * self.split_ratio)]
+        split_idx = int(len(img_labels) * self.split_ratio)
         if self.mode == 'train':
             img_set = img_names[:split_idx]
             label_set = img_labels[:split_idx]
