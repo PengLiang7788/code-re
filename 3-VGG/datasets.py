@@ -6,17 +6,16 @@ import os
 
 random.seed(123)
 
-
 class MyDataset(Dataset):
     def __init__(self, root, train=True, transform=None, split_ratio=0.9, rng_seed=620):
         super(MyDataset, self).__init__()
-        self.data = [] # 保存图片路径和标签
-        self.data_dir = root # 数据存放路径
-        self.rng_seed = rng_seed # 定义随机数种子
-        self.transform = transform # 定义数据转换
+        self.data = []                          # 存放(img_path, label)构成的列表
+        self.data_dir = root                    # 数据存放路径
+        self.rng_seed = rng_seed                # 定义随机数种子
+        self.transform = transform              # 定义数据转换
         self.mode = "train" if train else "val" # 判断是训练还是验证集
-        self.data = self._get_data() # _get_data()返回(图片路径,图片标签)构成的列表
-        self.split_ratio = split_ratio # 定义训练集和验证集比例
+        self.split_ratio = split_ratio          # 定义训练集和验证集比例
+        self.data = self._get_data()            # _get_data()返回(img_path,label)构成的列表
     
     def __getitem__(self, idx):
         path_img, label = self.data[idx]
@@ -58,3 +57,9 @@ class MyDataset(Dataset):
         path_img = [os.path.join(self.data_dir, n) for n in img_set]
         data = [(n, l) for n, l in zip(path_img, label_set)]
         return data
+
+if __name__ == "__main__":
+    data_dir = '../data/train'
+    norm_mean = [0.485, 0.456, 0.406]
+    norm_std = [0.229, 0.224, 0.225]
+    train_dataset = MyDataset(root=data_dir, train=True)
