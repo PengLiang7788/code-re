@@ -40,9 +40,7 @@ normalizes = transforms.Normalize(norm_mean, norm_std)
 valid_transform = transforms.Compose([
         transforms.Resize((256, 256)),                                    # 将图像转换成(256, 256)大小
         transforms.TenCrop(224, vertical_flip=False),                     # 将图像四个角和中心裁剪包括水平翻转后，一共裁剪十个块，不包括垂直翻转，大小为224×224
-        transforms.Lambda(lambda crops: torch.stack(    
-            [normalizes(transforms.ToTensor()(crop)) for crop in crops]   # 对裁剪下来的10个图像转换成Tensor类型并进行正则化
-            ))
+        transforms.Lambda(lambda crops: torch.stack([normalizes(transforms.ToTensor()(crop)) for crop in crops])), 
 ])
 
 # 构建Dataset
@@ -115,10 +113,14 @@ for i in range(epoch):
         for data in valid_dataloader:
             imgs, targets = data
             imgs, targets = imgs.to(device),targets.to(device)
-            outputs = model(imgs)
-            loss = loss_fn(outputs, targets)
+
+            bs, ncrops, c, h, w = imgs.size()
+            outputs = model(imgs.view(-1, c, h, w))
+            outputs_avg = outputs.view(bs, ncrops, -1).mean(1)
+
+            loss = loss_fn(outputs_avg, targets)
             total_test_loss += loss.item()
-            accuracy = (outputs.argmax(1) == targets).sum()
+            accuracy = (outputs_avg.argmax(1) == targets).sum()
             total_accuracy += accuracy
     print("整体测试集上的Loss: {}".format(total_test_loss))
     print("整体测试集上的正确率: {}".format(total_accuracy / valid_size))
