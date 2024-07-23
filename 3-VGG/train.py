@@ -120,7 +120,10 @@ for i in range(epoch):
 
             loss = loss_fn(outputs_avg, targets)
             total_test_loss += loss.item()
-            accuracy = (outputs_avg.argmax(1) == targets).sum()
+
+            _, predicted = torch.max(outputs_avg.data, 1)
+
+            accuracy = (predicted == targets).squeeze().cpu().sum().numpy()
             total_accuracy += accuracy
     print("整体测试集上的Loss: {}".format(total_test_loss))
     print("整体测试集上的正确率: {}".format(total_accuracy / valid_size))
