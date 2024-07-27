@@ -21,14 +21,13 @@ parser.add_argument('--restore_file', default=None,
 parser.add_argument('--log_dir', default='logs',
                     help="Direcotry containing tensorboard file")
 
-def train(model, optimizer, loss_fn, dataloader, device, metrics, params):
+def train(model, optimizer, loss_fn, dataloader, metrics, params):
     """
     Args:
         model: (torch.nn.Module) the neural network
         optimizer: (torch.optim) optimizer for parameters of model
         loss_fn: a function that takes batch_output and batch_labels and computes the loss for the batch
         dataloader: (DataLoader) a torch.utils.data.DataLoader object that fetchs training data
-        device: model training equipment
         metrics: (dict) a dictionary of functions that compute a metrix using the output and labels of each batch
         params: (Params) hyperparmeters
     """
@@ -42,7 +41,9 @@ def train(model, optimizer, loss_fn, dataloader, device, metrics, params):
     with tqdm(total=len(dataloader)) as t:
         for i, (train_batch, labels_batch) in enumerate(dataloader):
             # 将数据移动到指定设备上
-            train_batch, labels_batch = train_batch.to(device), labels_batch.to(device)
+            if params.cuda:
+                train_batch, labels_batch = train_batch.cuda(non_blocking=True), labels_batch.cuda(non_blocking=True)
+
             # 转换成 tensor 类型变量
             train_batch, labels_batch = Variable(train_batch), Variable(labels_batch)
 
@@ -92,6 +93,18 @@ if __name__ == '__main__':
     assert os.path.isfile(json_path), "No json configuration file found at {}".format(json_path)
     params = utils.Params(json_path)
     # 定义训练设备
+    params.cuda = torch.cuda.is_available()
+
+    # 设置随机种子
+    torch.manual_seed(230)
+    if params.cuda:
+        torch.cuda.manual_seed(230)
+
+    # 设置 logger
+    utils.set_logger(os.path.join(args.model_dir, 'train.log'))
+
+    # 加载训练数据集
+    logging.info("Loading the datasets...")
     
 
 
