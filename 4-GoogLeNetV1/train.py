@@ -8,7 +8,7 @@ from model import GoogLeNet
 from tqdm import tqdm
 import utils
 import numpy as np
-
+import data_loader
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--data_dir', default='../data/train', 
@@ -105,6 +105,9 @@ if __name__ == '__main__':
 
     # 加载训练数据集
     logging.info("Loading the datasets...")
-    
+    dataloaders = data_loader.fetch_dataloader(['train', 'val'], args.data_dir, params)
+    train_dl = dataloaders['train']
+    val_dl = dataloaders['val']
+
 
 
