@@ -173,8 +173,9 @@ class BasicConv2d(nn.Module):
         return x
 
 if __name__ == "__main__":
-    x = torch.randn((1,3,224,224))
-    model = GoogLeNet()
+    x = torch.randn((32,3,224,224))
+    model = GoogLeNet(num_classes=2, aux_logits=True, init_weights=True)
+    model.train()
     y = model(x)
     print(y)
 

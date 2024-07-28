@@ -86,16 +86,19 @@ def fetch_dataloader(types, data_dir, params):
         params: (Params) hyperparameters
     Returns:
         data: (dict) contains the DataLoader object for each type in types
+        data_len: (dict) contains the Dataset length
     """
     dataloaders = {}
+    data_len = {}
 
     for split in ['train', 'val']:
         if split in types:
             dataset = MyDataset(root=data_dir, mode=split, transform=data_transform[split])
             dl = DataLoader(dataset, batch_size=params.batch_size, shuffle=True)
             dataloaders[split] = dl
+            data_len[split] = len(dataset)
     
-    return dataloaders
+    return dataloaders, data_len
         
 
 
