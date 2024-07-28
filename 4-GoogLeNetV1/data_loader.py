@@ -24,7 +24,7 @@ data_transform = {
         transforms.Resize((256)),
         transforms.CenterCrop(256),
         transforms.TenCrop(224, vertical_flip=False),
-        transforms.Lambda(lambda crops: torch.stack([normalizes(transforms.ToTensor()(crops)) for crop in crops]))])
+        transforms.Lambda(lambda crops: torch.stack([normalizes(transforms.ToTensor()(crop)) for crop in crops]))])
 }
 
 class MyDataset(Dataset):
