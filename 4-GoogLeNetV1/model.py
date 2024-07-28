@@ -8,7 +8,7 @@ class GoogLeNet(nn.Module):
         super(GoogLeNet, self).__init__()
         self.aux_logits = aux_logits
 
-        self.conv1 = BasicConv2d(3, 64, kernel_size =7, stride=2, padding=2)
+        self.conv1 = BasicConv2d(3, 64, kernel_size =7, stride=2, padding=3)
         self.maxpool1 = nn.MaxPool2d(kernel_size=3, stride=2, ceil_mode=True)
 
         self.conv2 = BasicConv2d(64, 64, kernel_size=1) 
@@ -122,7 +122,9 @@ class InceptionAux(nn.Module):
         x = torch.flatten(x, 1)
         x = F.dropout(x, p=0.5, training=self.training)
         # N x 2048
-        x = F.relu(self.fc1(x), inplace=True)
+        x = self.fc1(x)
+        # N x 1024
+        x = F.relu(x, inplace=True)
         x = F.dropout(x, p=0.5, training=self.training)
         # N x 1024
         x = self.fc2(x)
