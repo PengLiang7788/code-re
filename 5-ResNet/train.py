@@ -128,7 +128,7 @@ def evaluation(model: nn.Module, val_loader: DataLoader):
     return losses, acces # 返回平均损失和准确率
 
 def train(model:nn.Module, train_loader:DataLoader, val_loader:DataLoader, 
-          optimizer: torch.optim, tb_writer:SummaryWriter, scheduler: CosineAnnealingLR, loss_fn: torch.nn.CrossEntropyLoss):
+          optimizer: torch.optim, scheduler: CosineAnnealingLR, loss_fn: torch.nn.CrossEntropyLoss):
     # 记录训练开始时间
     start_time = time.time()
     # 初始最佳准确率为-1，以便跟踪最佳模型
@@ -200,4 +200,4 @@ if __name__ == '__main__':
     loss_fn.to(device)
 
     scheduler = CosineAnnealingLR(optimizer, T_max=args.epoch)  # 创建余弦退火学习率调度器  自动调整lr
-    train(model, train_loader, val_loader, optimizer, tb_writer, scheduler, loss_fn)
+    train(model, train_loader, val_loader, optimizer, scheduler, loss_fn)
