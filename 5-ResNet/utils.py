@@ -50,7 +50,7 @@ def accuracy(output, target, topk=(1,)):
     # 从模型输出中获取前k个最高分的类别预测结果
     _, pred = output.topk(maxk, 1, True, True)
     # 转置, 使得每一列对应一个样本预测结果
-    pred = pred.T()
+    pred = pred.t()
     # 将预测结果与目标标签进行比较，得到一个布尔类型的矩阵，表示每个预测是否正确
     correct = pred.eq(target.view(1, -1).expand_as(pred))
 

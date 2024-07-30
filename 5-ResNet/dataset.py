@@ -30,9 +30,6 @@ class MyDataset(Dataset):
         image_path, label = self.data[idx]
         img = Image.open(image_path).convert('RGB')
         if self.transform is not None:
-            # 将图像随机缩放到[256, 480]上
-            new_size = self._random_scale_size(256, 480, img.size)
-            img = transforms.Resize(new_size)
             img = self.transform(img)
         
         return img, label
