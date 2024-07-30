@@ -88,7 +88,7 @@ train_loader = DataLoader(train_set, batch_size=args.batch_size, num_workers=arg
 val_loader = DataLoader(val_set, batch_size=args.batch_size, num_workers=args.workers, shuffle=False, pin_memory=True)
 
 # train
-def train_one_epoch(model: nn.Module, optimizer: torch.optim, train_loader: DataLoader):
+def train_one_epoch(model: nn.Module, optimizer: torch.optim, train_loader: DataLoader, loss_fn: torch.nn.CrossEntropyLoss):
     model.train()
     acc_recorder = AverageMeter()  # 用于记录精度的工具
     loss_recorder = AverageMeter()  # 用于记录损失的工具
@@ -97,7 +97,7 @@ def train_one_epoch(model: nn.Module, optimizer: torch.optim, train_loader: Data
         inputs, targets = inputs.to(device), targets.to(device)
 
         outputs = model(inputs)
-        loss = F.cross_entropy(outputs, targets)
+        loss = loss_fn(outputs, targets)
         loss_recorder.update(loss.item(), n=inputs.size(0))
         acc = accuracy(outputs, targets)[0]  # 计算精度
         acc_recorder.update(acc.item(), n=inputs.size(0))  # 记录精度值
@@ -128,7 +128,7 @@ def evaluation(model: nn.Module, val_loader: DataLoader):
     return losses, acces # 返回平均损失和准确率
 
 def train(model:nn.Module, train_loader:DataLoader, val_loader:DataLoader, 
-          optimizer: torch.optim, tb_writer:SummaryWriter, scheduler: CosineAnnealingLR):
+          optimizer: torch.optim, tb_writer:SummaryWriter, scheduler: CosineAnnealingLR, loss_fn: torch.nn.CrossEntropyLoss):
     # 记录训练开始时间
     start_time = time.time()
     # 初始最佳准确率为-1，以便跟踪最佳模型
@@ -138,7 +138,7 @@ def train(model:nn.Module, train_loader:DataLoader, val_loader:DataLoader,
 
     for epoch in range(args.epoch):
         # 在训练集上执行一个周期训练, 并获取训练损失和准确率
-        train_losses, train_access = train_one_epoch(model, optimizer, train_loader)
+        train_losses, train_access = train_one_epoch(model, optimizer, train_loader, loss_fn)
         # 在测试集上评估模型性能，获取测试损失和准确率
         val_losses, val_access = evaluation(model, val_loader)
         # 如果当前测试准确率高于历史最佳准确率，更新最佳准确率，并保存模型参数
@@ -186,8 +186,7 @@ if __name__ == '__main__':
     tb_writer = SummaryWriter(log_dir=tb_path)
     lr = args.lr
     model = model_dict[args.model_names](num_classes=args.classes_num, pretrained=args.pre_trained)  # 根据命令行参数创建神经网络模型
-    if torch.cuda.is_available():
-        model = model.cuda()
+    model.to(device)
 
     optimizer = optim.SGD(  # 创建随机梯度下降 (SGD) 优化器
         model.parameters(),
@@ -197,6 +196,8 @@ if __name__ == '__main__':
         weight_decay=args.weight_decay,
     )
 
-    scheduler = CosineAnnealingLR(optimizer, T_max=args.epoch)  # 创建余弦退火学习率调度器  自动调整lr
+    loss_fn = torch.nn.CrossEntropyLoss()
+    loss_fn.to(device)
 
-    train(model, train_loader, val_loader, optimizer, tb_writer, scheduler)
+    scheduler = CosineAnnealingLR(optimizer, T_max=args.epoch)  # 创建余弦退火学习率调度器  自动调整lr
+    train(model, train_loader, val_loader, optimizer, tb_writer, scheduler, loss_fn)
