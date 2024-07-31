@@ -54,7 +54,7 @@ exp_name = args.exp_postfix
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 # 创建实验结果文件夹路径
-exp_path = "./report/{}/{}/{}".format(args.dataset, args.model_names, exp_name)
+exp_path = "./runs/report/{}/{}".format(args.model_names, exp_name)
 os.makedirs(exp_path, exist_ok=True)
 
 # 加载数据集
@@ -79,8 +79,8 @@ data_transform = {
 }
 
 # 创建数据集
-train_set = MyDataset(args.dataset, mode="train", transform=data_transform["train"], rng_seed=args.seed)
-val_set = MyDataset(args.dataset, mode="val", transform=data_transform["val"], rng_seed=args.seed)
+train_set = MyDataset(args.dataset, mode="train", transform=data_transform["train"], split_ratio=0.9, rng_seed=args.seed)
+val_set = MyDataset(args.dataset, mode="val", transform=data_transform["val"], split_ratio=0.9, rng_seed=args.seed)
 
 # 创建数据集加载器
 # pin_memory 如果可用，将数据加载到 GPU 内存中以提高训练速度
@@ -94,23 +94,22 @@ def train_one_epoch(model: nn.Module, optimizer: torch.optim, train_loader: Data
     loss_recorder = AverageMeter()  # 用于记录损失的工具
 
     for (inputs, targets) in tqdm(train_loader, desc="train"):
-        inputs, targets = inputs.to(device), targets.to(device)
-
-        outputs = model(inputs)
-        loss = loss_fn(outputs, targets)
-        loss_recorder.update(loss.item(), n=inputs.size(0))
-        acc = accuracy(outputs, targets)[0]  # 计算精度
-        acc_recorder.update(acc.item(), n=inputs.size(0))  # 记录精度值
-        optimizer.zero_grad()  # 清零之前的梯度
-        loss.backward()  # 反向传播，计算梯度
-        optimizer.step()  # 更新模型参数
+        inputs, targets = inputs.to(device), targets.to(device)  # 将数据集放在相应设备上
+        outputs = model(inputs)                                  # 模型预测
+        loss = loss_fn(outputs, targets)                         # 计算损失
+        loss_recorder.update(loss.item(), n=inputs.size(0))      # 更新损失值
+        acc = accuracy(outputs, targets)[0]                      # 计算精度
+        acc_recorder.update(acc.item(), n=inputs.size(0))        # 记录精度值
+        optimizer.zero_grad()                                    # 清零之前的梯度
+        loss.backward()                                          # 反向传播，计算梯度
+        optimizer.step()                                         # 更新模型参数
     
     losses = loss_recorder.avg  # 计算平均损失
     acces = acc_recorder.avg  # 计算平均精度
 
     return losses, acces
 
-def evaluation(model: nn.Module, val_loader: DataLoader):
+def evaluation(model: nn.Module, val_loader: DataLoader, loss_fn:torch.nn.CrossEntropyLoss):
     model.eval()
     acc_recorder = AverageMeter()  # 初始化两个计量器，用于记录准确度和损失
     loss_recorder = AverageMeter()
@@ -120,7 +119,7 @@ def evaluation(model: nn.Module, val_loader: DataLoader):
             img, label = img.to(device), label.to(device)
             out = model(img)
             acc = accuracy(out, label)[0]
-            loss = F.cross_entropy(out, label) # 计算交叉熵损失
+            loss = loss_fn(out, label) # 计算交叉熵损失
             acc_recorder.update(acc.item(), img.size(0))  # 更新准确率记录器，记录当前批次的准确率  img.size(0)表示批次中的样本数量
             loss_recorder.update(loss.item(), img.size(0))  # 更新损失记录器，记录当前批次的损失
     losses = loss_recorder.avg # 计算所有批次的平均损失
@@ -140,7 +139,7 @@ def train(model:nn.Module, train_loader:DataLoader, val_loader:DataLoader,
         # 在训练集上执行一个周期训练, 并获取训练损失和准确率
         train_losses, train_access = train_one_epoch(model, optimizer, train_loader, loss_fn)
         # 在测试集上评估模型性能，获取测试损失和准确率
-        val_losses, val_access = evaluation(model, val_loader)
+        val_losses, val_access = evaluation(model, val_loader, loss_fn)
         # 如果当前测试准确率高于历史最佳准确率，更新最佳准确率，并保存模型参数
         if val_access > best_acc:
             best_acc = val_access
@@ -181,9 +180,9 @@ def train(model:nn.Module, train_loader:DataLoader, val_loader:DataLoader,
     f.close()
 
 if __name__ == '__main__':
-    tb_path = "runs/{}/{}/{}".format(args.dataset, args.model_names,  # 创建 TensorBoard 日志目录路径
-                                     args.exp_postfix)
+    tb_path = "runs/logs/{}/{}".format(args.model_names, args.exp_postfix)
     tb_writer = SummaryWriter(log_dir=tb_path)
+    
     lr = args.lr
     model = model_dict[args.model_names](num_classes=args.classes_num, pretrained=args.pre_trained)  # 根据命令行参数创建神经网络模型
     model.to(device)
@@ -201,3 +200,4 @@ if __name__ == '__main__':
 
     scheduler = CosineAnnealingLR(optimizer, T_max=args.epoch)  # 创建余弦退火学习率调度器  自动调整lr
     train(model, train_loader, val_loader, optimizer, scheduler, loss_fn)
+    tb_writer.close()
