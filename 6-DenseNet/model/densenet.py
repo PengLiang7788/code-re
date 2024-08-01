@@ -17,14 +17,10 @@ class BasicBlock(nn.Module):
 
     # Composit function bn -> relu -> conv
     def forward(self, x):
-        out = self.bn1(x)
-        out = self.relu(out)
-        out = self.conv(out)
-
+        out = self.conv(self.relu(self.bn1(x)))
         # Sec4.2 Training 除了第一个卷积层, 每个卷积层后加一个dropout层
         if self.droprate > 0:
             out = F.dropout(out, p=self.droprate, training=self.training)
-
         # 将本层的输出和前面层的输入拼接起来, 作为后面层的输入
         return torch.cat([x, out], 1)            
 
@@ -76,8 +72,28 @@ class BottleNeck(nn.Module):
         return torch.cat([x, out], 1)
 
 class DenseBlock(nn.Module):
-    def __init__(self):
+    def __init__(self, block, nb_layers, in_channel, growth_rate, drop_rate=0.0):
+        """
+        Args:
+            block: BasicBlock/BottleNeck
+            nb_layers: the number of block
+            in_channel: input channel
+            growth_rate: growth rate
+            drop_rate: dropout rate
+        """
         super(DenseBlock, self).__init__()
+        self.layer = self._make_layer(block, in_channel, growth_rate, nb_layers, drop_rate)
+    
+    def _make_layer(self, block, in_channel, growth_rate, nb_layers, drop_rate):
+        layers = []
+        for i in range(nb_layers):
+            # 每一层的输出都是 growth_rate 个通道, 块中前面块的输出作为后面块的输入
+            layers.append(block(in_channel + i * growth_rate, growth_rate, drop_rate))
+
+        return nn.Sequential(*layers)
+
+    def forward(self, x):
+        return self.layer(x)
 
 class DenseNet(nn.Module):
     def __init__(self):
