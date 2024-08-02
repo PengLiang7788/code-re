@@ -26,7 +26,7 @@ parser.add_argument('--batch_size', type=int, default=64, help="mini-batch size 
 parser.add_argument('--lr', '--learning_rate', type=float, default=0.1, help="initial learning rate")
 parser.add_argument('--momentum', default=0.9, type=int, help="momentum")
 parser.add_argument('--weight_decay', type=float, default=1e-4, help="weight decay (default: 1e-4)")
-parser.add_argument('--print_freq', '-p', default=10, type=int, help="print frequency (default: 10)")
+parser.add_argument('--print_freq', '-p', default=1, type=int, help="print frequency (default: 10)")
 parser.add_argument('--layers', default=100, type=int, help='total number of layers (default: 100)')
 parser.add_argument('--growth', default=12, type=int, help='number of new channels per layer (default: 12)')
 parser.add_argument('--droprate', default=0, type=float, help='dropout probability (default: 0.0)')
@@ -177,7 +177,7 @@ def train(model:nn.Module, train_loader: DataLoader, val_loader: DataLoader,
         if (epoch + 1) % args.print_freq == 0: #  print_freq指定为1 则每轮都打印
             msg = "epoch:{} model:{} train loss:{:.2f} acc:{:.2f}  test loss{:.2f} acc:{:.2f}\n".format(
                 epoch + 1,
-                args.model_names,
+                args.name,
                 train_losses,
                 train_access,
                 val_losses,
@@ -187,7 +187,7 @@ def train(model:nn.Module, train_loader: DataLoader, val_loader: DataLoader,
             f.write(msg)
             f.flush()
     # 输出训练结束后的最佳准确度和总训练时间
-    msg_best = "model:{} best acc:{:.2f}\n".format(args.model_names, best_acc)
+    msg_best = "model:{} best acc:{:.2f}\n".format(args.name, best_acc)
     time_elapsed = "traninng time: {}".format(time.time() - start_time)
     print(msg_best)
     f.write(msg_best)
