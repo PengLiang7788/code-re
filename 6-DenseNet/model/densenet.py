@@ -2,6 +2,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import math
+from torchsummary import summary
 
 
 # 对应论文中 Composit function
@@ -174,4 +175,8 @@ class DenseNet(nn.Module):
         out = self.avgpool(out)
         out = torch.flatten(out, 1)
         return self.fc(out)
-        
+
+
+if __name__ == '__main__':
+    model = DenseNet(100, 10, 12, 0.5, True, 0.0)
+    summary(model, (3, 32, 32))
