@@ -1,5 +1,6 @@
 import torch
 import torch.nn as nn
+from torchsummary import summary
 
 # 深度可分离卷积层
 class DepthWiseSeparable(nn.Module):
@@ -23,7 +24,7 @@ class DepthWiseSeparable(nn.Module):
         self.pointwise = nn.Conv2d(in_channels, out_channels, kernel_size=1, stride=1, padding=0, bias=False)
         self.bn2 = nn.BatchNorm2d(out_channels)
 
-        self.relu = nn.ReLU()
+        self.relu = nn.ReLU(inplace=True)
 
     def forward(self, x):
         x = self.depthwise(x)
@@ -33,4 +34,71 @@ class DepthWiseSeparable(nn.Module):
         x = self.relu(self.bn2(x))
 
         return x
+
+class MobileNet(nn.Module):
+    def __init__(self, num_classes=1000):
+        super(MobileNet, self).__init__()
+
+        # 卷积层
+        # N x 3 x 224 x 224
+        self.conv = nn.Sequential(
+            nn.Conv2d(in_channels=3, out_channels=32, kernel_size=3, stride=2, padding=1, bias=False),
+            nn.BatchNorm2d(32),
+            nn.ReLU()
+        )
+
+        # 深度可分离卷积
+        self.features = nn.Sequential(
+            # N x 32 x 112 x 112
+            DepthWiseSeparable(in_channels=32, out_channels=64, stride=1),
+            # N x 64 x 112 x 112
+            DepthWiseSeparable(in_channels=64, out_channels=128, stride=2),
+            # N x 128 x 56 x 56
+            DepthWiseSeparable(in_channels=128, out_channels=128, stride=1),
+            # N x 128 x 56 x 56
+            DepthWiseSeparable(in_channels=128, out_channels=256, stride=2),
+            # N x 256 x 28 x 28
+            DepthWiseSeparable(in_channels=256, out_channels=256, stride=1),
+            # N x 256 x 28 x 28
+            DepthWiseSeparable(in_channels=256, out_channels=512, stride=2),
+            # N x 512 x 14 x 14
+            DepthWiseSeparable(in_channels=512, out_channels=512, stride=1),
+            # N x 512 x 14 x 14
+            DepthWiseSeparable(in_channels=512, out_channels=512, stride=1),
+            # N x 512 x 14 x 14
+            DepthWiseSeparable(in_channels=512, out_channels=512, stride=1),
+            # N x 512 x 14 x 14
+            DepthWiseSeparable(in_channels=512, out_channels=512, stride=1),
+            # N x 512 x 14 x 14
+            DepthWiseSeparable(in_channels=512, out_channels=512, stride=1),
+            # N x 512 x 14 x 14
+            DepthWiseSeparable(in_channels=512, out_channels=1024, stride=2),
+            # N x 1024 x 7 x 7
+            DepthWiseSeparable(in_channels=1024, out_channels=1024, stride=1)
+            # N x 1024 x 7 x 7
+        )
+
+        self.classifier = nn.Sequential(
+            # N x 1024 x 1 x 1
+            nn.AdaptiveAvgPool2d((1, 1)),
+            nn.Flatten(),
+            # N x num_classes
+            nn.Linear(1024, num_classes),
+            nn.Softmax()
+        )
+
+    def forward(self, x):
+        out = self.conv(x)
+        out = self.features(out)
+
+        out = self.classifier(out)
+        return out
+
+if __name__ == '__main__':
+    model = MobileNet()
+    summary(model)
+
+
+
+
 
