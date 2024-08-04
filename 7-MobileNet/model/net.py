@@ -2,6 +2,7 @@ import torch
 import torch.nn as nn
 from torchsummary import summary
 
+
 # 深度可分离卷积层
 class DepthWiseSeparable(nn.Module):
     def __init__(self, in_channels, out_channels, stride):
@@ -16,8 +17,8 @@ class DepthWiseSeparable(nn.Module):
         # 设置padding=1可以使得在stride=1时保持尺寸不变, 在stride=2时使得尺寸减半
         # groups=in_channel, 将输入特征图分成in_channel组，每个卷积核对应一组, 因此可以实现每个卷积核作用在一个通道上
         # 此时参数量为 输出通道数 x 卷积核大小(3 x 3)
-        self.depthwise = nn.Conv2d(in_channels, in_channels, kernel_size=3, stride=stride, 
-                               padding=1, groups=in_channels, bias=False)
+        self.depthwise = nn.Conv2d(in_channels, in_channels, kernel_size=3, stride=stride,
+                                   padding=1, groups=in_channels, bias=False)
         # 在深度卷积和逐点卷积之后都跟着BatchNorm和ReLU
         self.bn1 = nn.BatchNorm2d(in_channels)
 
@@ -34,6 +35,7 @@ class DepthWiseSeparable(nn.Module):
         x = self.relu(self.bn2(x))
 
         return x
+
 
 class MobileNet(nn.Module):
     def __init__(self, num_classes=1000):
@@ -94,11 +96,7 @@ class MobileNet(nn.Module):
         out = self.classifier(out)
         return out
 
+
 if __name__ == '__main__':
     model = MobileNet()
     summary(model)
-
-
-
-
-
