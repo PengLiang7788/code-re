@@ -19,12 +19,13 @@ parser = argparse.ArgumentParser("Pytorch MobileNet Training")
 parser.add_argument('--epochs', type=int, default=100, help="number of total epochs to train")
 parser.add_argument('--batch_size', type=int, default=64, help="mini-batch size (default: 64)")
 parser.add_argument('--lr', '--learning_rate', type=float, default=0.1, help="initial learning rate")
-parser.add_argument('--weight_decay', type=float, default=1e-4, help="weight decay (default: 1e-4)")
+parser.add_argument('--weight_decay', type=float, default=1e-4, help="weight decay (default: 1e-3)")
 parser.add_argument('--print_freq', '-p', default=1, type=int, help="print frequency (default: 1)")
 parser.add_argument('--name', default='MobileNet_v1', type=str, help='name of experiment')
 parser.add_argument("--seed", type=int, default=33, help="random seed")
 parser.add_argument('--workers', type=int, default=8, help="max dataloader workers (per RANK in DDP mode)")
 parser.add_argument('--split_ratio', type=float, default=0.8, help="split ratio")
+parser.add_argument("--momentum", type=float, default=0.9, help="momentum")
 
 args = parser.parse_args()
 
@@ -150,7 +151,7 @@ def train(model: nn.Module, train_loader: DataLoader, val_loader: DataLoader,
             best_acc = val_acc
             state_dict = dict(epoch=epoch + 1, model=model.state_dict(), acc=val_acc)
             pth_path = os.path.join(exp_path, "ckpt", "best.pth")
-            os.makedirs(pth_path, exist_ok=True)
+            os.makedirs(os.path.dirname(pth_path), exist_ok=True)
             torch.save(state_dict, pth_path)
 
         # 更新学习率
@@ -177,7 +178,7 @@ def train(model: nn.Module, train_loader: DataLoader, val_loader: DataLoader,
             f.flush()
     # 输出训练结束后的最佳准确度和总训练时间
     msg_best = "model:{} best acc:{:.2f}\n".format(args.name, best_acc)
-    time_elapsed = "traninng time: {}".format(time.time() - start_time)
+    time_elapsed = "training time: {}".format(time.time() - start_time)
     print(msg_best)
     f.write(msg_best)
     f.write(time_elapsed)
@@ -191,7 +192,13 @@ if __name__ == '__main__':
 
     model = MobileNet(num_classes=2)
     model = model.to(device)
-    optimizer = optim.Adam(model.parameters(), lr=lr, weight_decay=weight_decay)
+    optimizer = optim.SGD(  # 创建随机梯度下降 (SGD) 优化器
+        model.parameters(),
+        lr=lr,
+        momentum=args.momentum,
+        nesterov=True,
+        weight_decay=weight_decay,
+    )
     loss_fn = nn.CrossEntropyLoss()
     loss_fn.to(device)
 
