@@ -73,9 +73,9 @@ data_transforms = {
     ]),
     "val": transforms.Compose([
         transforms.Resize(256),
-        transforms.CenterCrop(256),
-        transforms.TenCrop(224, vertical_flip=False),
-        transforms.Lambda(lambda crops: torch.stack([normalize(transforms.ToTensor()(crop)) for crop in crops]))
+        transforms.RandomCrop(224),
+        transforms.ToTensor(),
+        transforms.Normalize(norm_mean, norm_std)
     ])
 }
 
