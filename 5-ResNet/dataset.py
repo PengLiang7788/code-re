@@ -17,42 +17,42 @@ class MyDataset(Dataset):
             rng_seed: (int) random seed
         """
         super(MyDataset, self).__init__()
-        self.data = []                      # 存放(image_path, label)所构成的列表
-        self.data_dir = data_dir            # 数据集存放路径
-        self.mode = mode                    # 训练集还是验证集
-        self.transform = transform          # 图像转换
-        self.split_ratio = split_ratio      # 数据集分割比例
-        self.rng_seed = rng_seed            # 随机数种子
+        self.data = []  # 存放(image_path, label)所构成的列表
+        self.data_dir = data_dir  # 数据集存放路径
+        self.mode = mode  # 训练集还是验证集
+        self.transform = transform  # 图像转换
+        self.split_ratio = split_ratio  # 数据集分割比例
+        self.rng_seed = rng_seed  # 随机数种子
 
-        self.data = self._get_data()        # _get_data()返回(img_path, label)构成的列表
-    
+        self.data = self._get_data()  # _get_data()返回(img_path, label)构成的列表
+
     def __getitem__(self, idx):
         image_path, label = self.data[idx]
         img = Image.open(image_path).convert('RGB')
         if self.transform is not None:
             img = self.transform(img)
-        
+
         return img, label
-    
+
     def _random_scale_size(min_size, max_size, current_size):
         # 随机选择短边的目标大小
         target_short_size = random.randint(min_size, max_size)
-        
+
         # 计算缩放比例
         if current_size[0] < current_size[1]:
             scale = target_short_size / current_size[0]
         else:
             scale = target_short_size / current_size[1]
-        
+
         # 计算新尺寸
         new_size = (int(current_size[0] * scale), int(current_size[1] * scale))
         return new_size
 
     def __len__(self):
         if len(self.data) == 0:
-            raise Exception("\n data_dir: {} is a empty dir! Please checkout your path to images!".format(self.data_dir))
+            raise Exception(
+                "\n data_dir: {} is a empty dir! Please checkout your path to images!".format(self.data_dir))
         return len(self.data)
-
 
     # 返回(image_path, label)构成的列表
     def _get_data(self):
@@ -75,12 +75,12 @@ class MyDataset(Dataset):
             label_set = image_labels[split_index:]
         else:
             raise Exception("self.mode 无法识别, 仅支持(train, val)")
-        
+
         path_image = [os.path.join(self.data_dir, n) for n in image_set]
         data = [(n, l) for n, l in zip(path_image, label_set)]
 
         return data
-        
+
 
 if __name__ == '__main__':
     data_dir = '../data/train'
