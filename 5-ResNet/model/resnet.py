@@ -243,23 +243,23 @@ class ResNet(nn.Module):
         return nn.Sequential(*layers)
 
 
-def resnet18(num_classes=1000, include_top=True, pretrained=False):
+def resnet18(num_classes=1000, include_top=True):
     return ResNet(BasicBlock, [2, 2, 2, 2], num_classes, include_top)
 
 
-def resnet34(num_classes=1000, include_top=True, pretrained=False):
+def resnet34(num_classes=1000, include_top=True):
     return ResNet(BasicBlock, [3, 4, 6, 3], num_classes, include_top)
 
 
-def resnet50(num_classes=1000, include_top=True, pretrained=False):
+def resnet50(num_classes=1000, include_top=True):
     return ResNet(BottleNeck, [3, 4, 6, 3], num_classes, include_top)
 
 
-def resnet101(num_classes=1000, include_top=True, pretrained=False):
+def resnet101(num_classes=1000, include_top=True):
     return ResNet(BottleNeck, [3, 4, 23, 3], num_classes, include_top)
 
 
-def resnet152(num_classes=1000, include_top=True, pretrained=False):
+def resnet152(num_classes=1000, include_top=True):
     return ResNet(BottleNeck, [3, 8, 36, 3], num_classes, include_top)
 
 

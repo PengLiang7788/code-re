@@ -9,5 +9,5 @@ model_dict = {
 }
 
 
-def create_model(model_name, num_classes):
-    return model_dict[model_name](num_classes=num_classes)
+def create_model(model_name, num_classes, include_top=True):
+    return model_dict[model_name](num_classes=num_classes, include_top=include_top)
