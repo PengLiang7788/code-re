@@ -1,4 +1,4 @@
-from net import v1
+from MobileNetV1 import v1
 
 model_dict = {
     "MobileNetV1": v1
