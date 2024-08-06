@@ -13,7 +13,7 @@ from datasets import MyDataset
 from utils import AverageMeter, accuracy
 from tqdm import tqdm
 from torch.utils.tensorboard import SummaryWriter
-from model.net import MobileNet
+from model import create_model
 
 parser = argparse.ArgumentParser("Pytorch MobileNet Training")
 parser.add_argument('--epochs', type=int, default=100, help="number of total epochs to train")
@@ -21,7 +21,7 @@ parser.add_argument('--batch_size', type=int, default=64, help="mini-batch size 
 parser.add_argument('--lr', '--learning_rate', type=float, default=0.1, help="initial learning rate")
 parser.add_argument('--weight_decay', type=float, default=1e-4, help="weight decay (default: 1e-3)")
 parser.add_argument('--print_freq', '-p', default=1, type=int, help="print frequency (default: 1)")
-parser.add_argument('--name', default='MobileNet_v1', type=str, help='name of experiment')
+parser.add_argument('--name', default='MobileNetV1', type=str, help='name of experiment')
 parser.add_argument("--seed", type=int, default=33, help="random seed")
 parser.add_argument('--workers', type=int, default=8, help="max dataloader workers (per RANK in DDP mode)")
 parser.add_argument('--split_ratio', type=float, default=0.8, help="split ratio")
@@ -190,7 +190,7 @@ if __name__ == '__main__':
     os.makedirs(tb_path, exist_ok=True)
     tb_writer = SummaryWriter(log_dir=tb_path)
 
-    model = MobileNet(num_classes=2)
+    model = create_model(model_name, num_classes=2)
     model = model.to(device)
     optimizer = optim.SGD(  # 创建随机梯度下降 (SGD) 优化器
         model.parameters(),
