@@ -1,8 +1,9 @@
 import torch
 import torch.nn as nn
 
+
 class MyModel(nn.Module):
-    def __init__(self):
+    def __init__(self, num_classes=10):
         super().__init__()
         self.model = nn.Sequential(
             nn.Conv2d(1, 6, kernel_size=5, stride=1, padding=2),
@@ -16,7 +17,7 @@ class MyModel(nn.Module):
             nn.Sigmoid(),
             nn.Linear(120, 84),
             nn.Sigmoid(),
-            nn.Linear(84, 10)
+            nn.Linear(84, num_classes)
         )
     
     def forward(self, x):
