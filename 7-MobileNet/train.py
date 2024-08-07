@@ -26,6 +26,7 @@ parser.add_argument("--seed", type=int, default=33, help="random seed")
 parser.add_argument('--workers', type=int, default=8, help="max dataloader workers (per RANK in DDP mode)")
 parser.add_argument('--split_ratio', type=float, default=0.8, help="split ratio")
 parser.add_argument("--momentum", type=float, default=0.9, help="momentum")
+parser.add_argument("--width_mult", type=float, default=1.0, help="width multiplier")
 
 args = parser.parse_args()
 
@@ -190,7 +191,7 @@ if __name__ == '__main__':
     os.makedirs(tb_path, exist_ok=True)
     tb_writer = SummaryWriter(log_dir=tb_path)
 
-    model = create_model(model_name, num_classes=2)
+    model = create_model(model_name, num_classes=2, width_mult=args.width_mult)
     model = model.to(device)
     optimizer = optim.SGD(  # 创建随机梯度下降 (SGD) 优化器
         model.parameters(),

@@ -1,5 +1,5 @@
-from MobileNetV1 import v1
-from MobileNetV2 import v2
+from model.MobileNetV1 import v1
+from model.MobileNetV2 import v2
 
 model_dict = {
     "MobileNetV1": v1,

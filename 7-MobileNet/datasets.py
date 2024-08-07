@@ -41,7 +41,7 @@ class MyDataset(Dataset):
         labels = [0 if n.startswith('cat') else 1 for n in image_names]
 
         # 分割数据集
-        split_index = int(self.split_ratio * len(image_names))
+        split_index = int(self.split_ratio * len(labels))
 
         if self.mode == "train":
             image_set = image_names[:split_index]
@@ -56,8 +56,3 @@ class MyDataset(Dataset):
         data = [(n, l) for n, l in zip(image_set, label_set)]
 
         return data
-
-
-if __name__ == '__main__':
-    data_dir = "../data/train"
-    dataset = MyDataset(data_dir)
