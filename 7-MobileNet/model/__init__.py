@@ -1,9 +1,12 @@
 from model.MobileNetV1 import v1
 from model.MobileNetV2 import v2
+from model.MobileNetV3 import create_v3_large, create_v3_small
 
 model_dict = {
-    "MobileNetV1": v1,
-    "MobileNetV2": v2
+    "mobilenet_v1": v1,
+    "mobilenet_v2": v2,
+    "mobilenet_v3_small": create_v3_small,
+    "mobilenet_v3_large": create_v3_large
 }
 
 
