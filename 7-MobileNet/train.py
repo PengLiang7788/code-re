@@ -24,7 +24,7 @@ parser.add_argument('--print_freq', '-p', default=1, type=int, help="print frequ
 parser.add_argument('--name', default='mobilenet_v3_large', type=str, help='name of experiment')
 parser.add_argument("--seed", type=int, default=33, help="random seed")
 parser.add_argument('--workers', type=int, default=8, help="max dataloader workers (per RANK in DDP mode)")
-parser.add_argument('--split_ratio', type=float, default=0.8, help="split ratio")
+parser.add_argument('--split_ratio', type=float, default=0.9, help="split ratio")
 parser.add_argument("--momentum", type=float, default=0.9, help="momentum")
 parser.add_argument("--width_mult", type=float, default=1.0, help="width multiplier")
 
