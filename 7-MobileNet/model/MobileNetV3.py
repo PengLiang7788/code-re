@@ -51,7 +51,7 @@ class SqueezeExcitation(nn.Module):
         return output * x
 
 
-class InvertedResidualConfig(nn.Module):
+class InvertedResidualConfig:
     def __init__(self, input_channel: int, kernel_size: int, expand_channel: int, output_channel: int,
                  use_se: bool, activation: str, stride: int, width_mult: float):
         """
@@ -166,50 +166,6 @@ class MobileNetV3(nn.Module):
 
         x = self.classifier(x)
         return x
-
-
-# def create_mobilenet_v3(arch: str, num_classes: int = 1000, width_mult: float = 1.0):
-#     bneck_conf = partial(InvertedResidualConfig, width_mult=width_mult)
-#
-#     if arch == "mobilenet_v3_large":
-#         inverted_residual_setting = [
-#             bneck_conf(16, 3, 16, 16, False, "RE", 1),
-#             bneck_conf(16, 3, 64, 24, False, "RE", 2),
-#             bneck_conf(24, 3, 72, 24, False, "RE", 1),
-#             bneck_conf(24, 5, 72, 40, True, "RE", 2),
-#             bneck_conf(40, 5, 120, 40, True, "RE", 1),
-#             bneck_conf(40, 5, 120, 40, True, "RE", 1),
-#             bneck_conf(40, 3, 240, 80, False, "HS", 2),
-#             bneck_conf(80, 3, 200, 80, False, "HS", 1),
-#             bneck_conf(80, 3, 184, 80, False, "HS", 1),
-#             bneck_conf(80, 3, 184, 80, False, "HS", 1),
-#             bneck_conf(80, 3, 480, 112, True, "HS", 1),
-#             bneck_conf(112, 3, 672, 112, True, "HS", 1),
-#             bneck_conf(112, 5, 672, 160, True, "HS", 2),
-#             bneck_conf(160, 5, 960, 160, True, "HS", 1),
-#             bneck_conf(160, 5, 960, 160, True, "HS", 1)
-#         ]
-#         last_channel = 1280
-#     elif arch == "mobilenet_v3_small":
-#         inverted_residual_setting = [
-#             bneck_conf(16, 3, 16, 16, True, "RE", 2),
-#             bneck_conf(16, 3, 72, 24, False, "RE", 2),
-#             bneck_conf(24, 3, 88, 24, False, "RE", 1),
-#             bneck_conf(24, 5, 96, 40, True, "HS", 2),
-#             bneck_conf(40, 5, 240, 40, True, "HS", 1),
-#             bneck_conf(40, 5, 240, 40, True, "HS", 1),
-#             bneck_conf(40, 5, 120, 48, True, "HS", 1),
-#             bneck_conf(48, 5, 144, 48, True, "HS", 1),
-#             bneck_conf(48, 5, 288, 96, True, "HS", 2),
-#             bneck_conf(96, 5, 576, 96, True, "HS", 1),
-#             bneck_conf(96, 5, 576, 96, True, "HS", 1)
-#         ]
-#         last_channel = 1024
-#     else:
-#         raise ValueError("Unsupported model type {}".format(arch))
-#
-#     model = MobileNetV3(inverted_residual_setting, num_classes, last_channel)
-#     return model
 
 
 def create_v3_large(num_classes: int = 1000, width_mult: float = 1.0):
