@@ -5,25 +5,20 @@ from typing import Optional, Callable
 from functools import partial
 
 
-class ConvBNActivation(nn.Sequential):
+class ConvBN(nn.Sequential):
     def __init__(self, in_planes: int,
                  out_planes: int,
                  kernel_size: int = 3,
                  stride: int = 1,
                  groups: int = 1,
-                 norm_layer: Optional[Callable[..., nn.Module]] = None,
-                 activation_layer: Optional[Callable[..., nn.Module]] = None):
+                 norm_layer: Optional[Callable[..., nn.Module]] = None):
         padding = (kernel_size - 1) // 2
         if norm_layer is None:
             norm_layer = nn.BatchNorm2d
-        if activation_layer is None:
-            # 不深的网络没有足够的非线性, 限制了其表征能力, 本文使用SiLU替代了ReLU激活
-            activation_layer = nn.SiLU
-        super(ConvBNActivation, self).__init__(
+        super(ConvBN, self).__init__(
             nn.Conv2d(in_channels=in_planes, out_channels=out_planes, kernel_size=kernel_size, stride=stride,
                       padding=padding, groups=groups, bias=False),
-            norm_layer(out_planes),
-            activation_layer(inplace=True)
+            norm_layer(out_planes)
         )
 
 
@@ -44,3 +39,32 @@ class SSEBlock(nn.Module):
         return torch.mul(bn, output)
 
 
+class DownSampling(nn.Module):
+    def __init__(self, in_planes: int, out_planes: int):
+        super(DownSampling, self).__init__()
+        self.branch1 = nn.Sequential(
+            # 图像长宽减半, AvgPool2d中padding默认等于kernel_size
+            nn.AvgPool2d(kernel_size=2),
+            nn.Conv2d(in_planes, out_planes, kernel_size=1, bias=False),
+            nn.BatchNorm2d(out_planes)
+        )
+        self.branch2 = nn.Sequential(
+            # 输入图像长宽减半, padding默认为0
+            nn.Conv2d(in_planes, out_planes, kernel_size=3, stride=2, padding=1, bias=False, groups=1),
+            nn.BatchNorm2d(out_planes)
+        )
+        self.branch3 = nn.Sequential(
+            # 图像从[b, c, h, w] -> [b, c, 1, 1]
+            nn.AdaptiveAvgPool2d((1, 1)),
+            nn.Conv2d(in_planes, out_planes, kernel_size=1, bias=False),
+            nn.Sigmoid()
+        )
+
+    def forward(self, x):
+        branch1 = self.branch1(x)
+        branch2 = self.branch2(x)
+        branch3 = self.branch3(x)
+
+        result = branch1 + branch2
+        result = result * branch3
+        return result
