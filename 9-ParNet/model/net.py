@@ -5,23 +5,6 @@ from typing import Optional, Callable
 from functools import partial
 
 
-class ConvBN(nn.Sequential):
-    def __init__(self, in_planes: int,
-                 out_planes: int,
-                 kernel_size: int = 3,
-                 stride: int = 1,
-                 groups: int = 1,
-                 norm_layer: Optional[Callable[..., nn.Module]] = None):
-        padding = (kernel_size - 1) // 2
-        if norm_layer is None:
-            norm_layer = nn.BatchNorm2d
-        super(ConvBN, self).__init__(
-            nn.Conv2d(in_channels=in_planes, out_channels=out_planes, kernel_size=kernel_size, stride=stride,
-                      padding=padding, groups=groups, bias=False),
-            norm_layer(out_planes)
-        )
-
-
 class SSEBlock(nn.Module):
     def __init__(self, in_planes: int):
         # SSE模块一个分支只进行BatchNorm, 输入特征矩阵形状不会改变
@@ -67,4 +50,52 @@ class DownSampling(nn.Module):
 
         result = branch1 + branch2
         result = result * branch3
-        return result
+        return F.silu(result, inplace=True)
+
+
+class FusionBlock(nn.Module):
+    def __init__(self, in_planes: int, out_planes: int):
+        super(FusionBlock, self).__init__()
+        self.bn = nn.BatchNorm2d(in_planes)
+        # 由于在最开始有一个concatenation, 导致Fusion模块内通道数翻倍
+        self.groups = in_planes
+        hidden_channel = in_planes * 2
+        self.branch1 = nn.Sequential(
+            nn.AvgPool2d(kernel_size=2),
+            nn.Conv2d(hidden_channel, out_planes, kernel_size=1, groups=2, stride=1, bias=False),
+            nn.BatchNorm2d(out_planes)
+        )
+        self.branch2 = nn.Sequential(
+            nn.Conv2d(hidden_channel, out_planes, kernel_size=3, stride=2, groups=2, padding=1, bias=False),
+            nn.BatchNorm2d(out_planes)
+        )
+        self.branch3 = nn.Sequential(
+            nn.AdaptiveAvgPool2d((1, 1)),
+            nn.Conv2d(hidden_channel, out_planes, kernel_size=1, groups=2, bias=False),
+            nn.Sigmoid()
+        )
+
+    # 通道混洗
+    def channel_shuffle(self, x):
+        b, c, h, w = x.data.size()
+        channels_per_groups = c // self.groups
+
+        x = x.reshape(b, channels_per_groups, self.groups, h, w)
+        x = x.permute(0, 2, 1, 3, 4)
+        x = x.reshape(b, c, h, w)
+
+        return x
+
+    def forward(self, input1, input2):
+        # concatenation
+        x = torch.cat([self.bn(input1), self.bn(input2)], dim=1)
+        # 通道混洗
+        x = self.channel_shuffle(x)
+        branch1 = self.branch1(x)
+        branch2 = self.branch2(x)
+        branch3 = self.branch3(x)
+
+        result = branch1 + branch2
+        result = result * branch3
+
+        return F.silu(result, inplace=True)
