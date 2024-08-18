@@ -172,16 +172,8 @@ class Block(nn.Module):
         self.mlp = FeedForward(in_planes=embed_dim, hidden_planes=hidden_dim, dropout=drop_ratio)
 
     def forward(self, x):
-        output = self.norm1(x)
-        output = self.attn(output)
-        output = self.drop_path(output)
-
-        x += output
-
-        output = self.norm2(x)
-        output = self.mlp(output)
-        output = self.drop_path(output)
-        x += output
+        x = x + self.drop_path(self.attn(self.norm1(x)))
+        x = x + self.drop_path(self.mlp(self.norm2(x)))
         return x
 
 
@@ -250,9 +242,9 @@ class VisionTransformer(nn.Module):
         x = self.pos_drop(x + self.pos_embed)
         x = self.blocks(x)
         x = self.norm(x)
-        x = x[:, 0]
-        x = self.head(x)
-        return x
+        output = x[:, 0]
+        output = self.head(output)
+        return output
 
 
 def _init_vit_weights(m):

@@ -30,7 +30,7 @@ def parse_opt():
     parser.add_argument('--workers', type=int, default=8, help="max dataloader workers (per RANK in DDP mode)")
     parser.add_argument('--split_ratio', type=float, default=0.1, help="split ratio")
     parser.add_argument("--momentum", type=float, default=0.9, help="momentum")
-    parser.add_argument("--data_dir", type=str, default=r"D:\datasets\flower_photos", help="path to dataset")
+    parser.add_argument("--data_dir", type=str, default=r"../flower_photos", help="path to dataset")
     parser.add_argument("--num_classes", type=int, default=5, help="number of classes")
     parser.add_argument('--lrf', type=float, default=0.01)
 
@@ -52,7 +52,8 @@ def train_one_epoch(model: nn.Module, optimizer: optim, train_loader: DataLoader
     loss_recoder = AverageMeter()
 
     for imgs, lebels in tqdm(train_loader, desc="train"):
-        imgs, labels = imgs.to(device), imgs.to(device)
+        imgs, labels = imgs.to(device), lebels.to(device)
+
         outputs = model(imgs)
         loss = loss_fn(outputs, labels)
         loss_recoder.update(loss.item(), imgs.size(0))
