@@ -57,22 +57,25 @@ class MyDataset(Dataset):
             image_class = class_indices[cls]
             # 按比例随机采样验证样本
             val_path = random.sample(images, k=int(len(images) * self.split_ratio))
+
             if self.mode == "train":
                 for img_path in images:
                     if img_path not in val_path:
                         images_path.append(img_path)
                         images_label.append(image_class)
             elif self.mode == "val":
-                for img_path in images:
-                    if img_path in val_path:
-                        images_path.append(img_path)
-                        images_label.append(image_class)
+                for img_path in val_path:
+                    images_path.append(img_path)
+                    images_label.append(image_class)
             else:
                 raise Exception("self.mode无法识别, 仅支持(train/val)")
-            data = [(n, l) for n, l in zip(images_path, images_label)]
-            return data
+
+        data = [(n, l) for n, l in zip(images_path, images_label)]
+        return data
 
 
 if __name__ == "__main__":
     root = r"D:\datasets\flower_photos"
     dataset = MyDataset(root_dir=root)
+    image, label = dataset[0]
+    print("hello")
