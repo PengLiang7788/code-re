@@ -250,6 +250,7 @@ class VisionTransformer(nn.Module):
         x = self.pos_drop(x + self.pos_embed)
         x = self.blocks(x)
         x = self.norm(x)
+        x = x[:, 0]
         x = self.head(x)
         return x
 
@@ -284,6 +285,6 @@ def vit_base_patch16_224(num_classes: int = 1000):
 
 if __name__ == '__main__':
     model = VisionTransformer()
-    x = torch.randn(1, 3, 224, 224)
+    x = torch.randn(4, 3, 224, 224)
     y = model(x)
     print(y.shape)
