@@ -122,7 +122,7 @@ def train(model: nn.Module, train_loader: DataLoader, val_loader: DataLoader,
         if (epoch + 1) % args.print_freq == 0:  # print_freq指定为1 则每轮都打印
             msg = "epoch:{} model:{} train loss:{:.2f} acc:{:.2f}  test loss{:.2f} acc:{:.2f}\n".format(
                 epoch + 1,
-                args.name,
+                args.model_name,
                 train_losses,
                 train_acc,
                 val_losses,
@@ -132,7 +132,7 @@ def train(model: nn.Module, train_loader: DataLoader, val_loader: DataLoader,
             f.write(msg)
             f.flush()
     # 输出训练结束后的最佳准确度和总训练时间
-    msg_best = "model:{} best acc:{:.2f}\n".format(args.name, best_acc)
+    msg_best = "model:{} best acc:{:.2f}\n".format(args.model_name, best_acc)
     time_elapsed = "training time: {}".format(time.time() - start_time)
     print(msg_best)
     f.write(msg_best)
@@ -198,6 +198,7 @@ if __name__ == '__main__':
 
     # 创建模型
     model = create_model(args.model_name, num_classes=args.num_classes)
+    model.to(device)
     pg = [p for p in model.parameters() if p.requires_grad]
 
     # 定义优化器
