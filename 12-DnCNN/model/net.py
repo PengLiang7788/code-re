@@ -2,6 +2,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import torch.nn.init as init
+from torchsummary import summary
 
 
 class DnCNN(nn.Module):
@@ -48,9 +49,13 @@ class DnCNN(nn.Module):
         for m in self.modules():
             if isinstance(m, nn.Conv2d):
                 init.orthogonal_(m.weight)
-                print('init weight')
                 if m.bias is not None:
                     init.constant_(m.bias, 0)
             elif isinstance(m, nn.BatchNorm2d):
                 init.constant_(m.weight, 1)
                 init.constant_(m.bias, 0)
+
+
+if __name__ == "__main__":
+    model = DnCNN()
+    summary(model, (1, 180, 180))
