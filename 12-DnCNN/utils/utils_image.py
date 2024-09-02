@@ -1,6 +1,7 @@
 import os
 import cv2
 import numpy as np
+import torch
 
 IMG_EXTENSIONS = ['.jpg', '.JPG', '.jpeg', '.JPEG', '.png', '.PNG', '.ppm', '.PPM', '.bmp', '.BMP', '.tif']
 
@@ -54,3 +55,33 @@ def imread_uint(path, img_channels=3):
             img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)  # RGB
 
     return img
+
+
+# 数据增强 flip or rotate
+def augment_img(img, mode=0):
+    '''Kai Zhang (github: https://github.com/cszn)
+    '''
+    if mode == 0:
+        return img
+    elif mode == 1:
+        return np.flipud(np.rot90(img))
+    elif mode == 2:
+        return np.flipud(img)
+    elif mode == 3:
+        return np.rot90(img, k=3)
+    elif mode == 4:
+        return np.flipud(np.rot90(img, k=2))
+    elif mode == 5:
+        return np.rot90(img)
+    elif mode == 6:
+        return np.rot90(img, k=2)
+    elif mode == 7:
+        return np.flipud(np.rot90(img, k=3))
+
+
+# 将HWC转换成三维张量
+def uint2tensor3(img):
+    if img.ndim == 2:
+        img = np.expand_dims(img, axis=2)
+    # np.ascontiguousarray(img)将输入图像转换为一个连续的内存块, 对于将Numpy数组转换成PyTorch张量是必要的, 提高转换效率
+    return torch.from_numpy(np.ascontiguousarray(img)).permute(2, 0, 1).float().div(255.)
