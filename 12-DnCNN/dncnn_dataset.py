@@ -48,25 +48,24 @@ class DatasetDnCNN(Dataset):
             # 将HWC格式的图像转换成CHW格式的tensor, 且进行归一化
             img_H = util.uint2tensor3(patch_H)
             # img_L噪声图, img_H干净图
-            img_L = img_H.copy()
+            img_L = img_H.clone()
 
             # 添加噪声
-            noise = torch.randn(img_L.size()).mul_(self.sigma/255.0)
+            noise = torch.randn(img_L.size()).mul_(self.sigma / 255.0)
             img_L.add_(noise)
         else:
-            img_H = util.uint2tensor3(img_H)
-            img_L = img_H.copy()
+            img_H = util.uint2single(img_H)
+            img_L = np.copy(img_H)
 
             # 添加噪声
             np.random.seed(seed=0)
-            img_L += np.random.normal(0, self.sigma_test/255.0, img_L.shape)
+            img_L += np.random.normal(0, self.sigma_test / 255.0, img_L.shape)
 
             # numpy -> tensor
-            img_L = util.uint2tensor3(img_L)
-            img_H = util.uint2tensor3(img_H)
+            img_L = util.single2tensor3(img_L)
+            img_H = util.single2tensor3(img_H)
 
         return {'L': img_L, 'H': img_H, 'H_path': H_path, 'L_path': L_path}
 
     def __len__(self):
         return len(self.paths_H)
-

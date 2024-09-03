@@ -58,4 +58,5 @@ class DnCNN(nn.Module):
 
 if __name__ == "__main__":
     model = DnCNN()
+
     summary(model, (1, 180, 180))

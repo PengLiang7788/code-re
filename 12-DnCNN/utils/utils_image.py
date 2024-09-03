@@ -85,3 +85,27 @@ def uint2tensor3(img):
         img = np.expand_dims(img, axis=2)
     # np.ascontiguousarray(img)将输入图像转换为一个连续的内存块, 对于将Numpy数组转换成PyTorch张量是必要的, 提高转换效率
     return torch.from_numpy(np.ascontiguousarray(img)).permute(2, 0, 1).float().div(255.)
+
+
+# convert 2/3/4-dimensional torch tensor to uint
+def tensor2uint(img):
+    img = img.data.squeeze().float().clamp_(0, 1).cpu().numpy()
+    if img.ndim == 3:
+        img = np.transpose(img, (1, 2, 0))
+    return np.uint8(img * 255.0).round()
+
+
+def imsave(img, img_path):
+    img = np.squeeze(img)
+    if img.ndim == 3:
+        img = img[:, :, [2, 1, 0]]
+    cv2.imwrite(img_path, img)
+
+
+# convert single (HxWxC) to 3-dimensional torch tensor
+def single2tensor3(img):
+    return torch.from_numpy(np.ascontiguousarray(img)).permute(2, 0, 1).float()
+
+
+def uint2single(img):
+    return np.float32(img / 255.)
