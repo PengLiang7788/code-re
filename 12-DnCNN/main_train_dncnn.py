@@ -137,13 +137,13 @@ def train(model: nn.Module, train_loader: DataLoader, test_loader: DataLoader,
             print(msg)
             f.write(msg)
             f.flush()
-        # 输出训练结束后的最佳准确度和总训练时间
-        msg_best = "model:{} best psnr:{:.2f}\n".format(args.model_name, best_psnr)
-        time_elapsed = "training time: {}".format(time.time() - start_time)
-        print(msg_best)
-        f.write(msg_best)
-        f.write(time_elapsed)
-        f.close()
+    # 输出训练结束后的最佳准确度和总训练时间
+    msg_best = "model:{} best psnr:{:.2f}\n".format(args.model_name, best_psnr)
+    time_elapsed = "training time: {}".format(time.time() - start_time)
+    print(msg_best)
+    f.write(msg_best)
+    f.write(time_elapsed)
+    f.close()
 
 
 if __name__ == '__main__':
