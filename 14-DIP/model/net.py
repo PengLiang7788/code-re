@@ -79,3 +79,25 @@ class UpSample(nn.Module):
         x = F.interpolate(x, scale_factor=2, mode=self.mode)
 
         return x
+
+
+class SkipConnection(nn.Module):
+    def __init__(self, in_channels, stride=1, ns=4, ks=1, padding=0):
+        """
+        Args:
+            in_channels: 输入通道数
+            stride: 步长
+            ns: 中间层通道数
+            ks: 卷积核大小
+        """
+        super(SkipConnection, self).__init__()
+        self.conv = nn.Conv2d(in_channels, ns, kernel_size=ks, stride=stride, padding=padding)
+        self.bn = nn.BatchNorm2d(ns)
+        self.relu = nn.LeakyReLU()
+
+    def forward(self, x):
+        x = self.conv(x)
+        x = self.bn(x)
+        x = self.relu(x)
+
+        return x
