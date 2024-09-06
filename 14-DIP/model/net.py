@@ -1,5 +1,7 @@
 import torch
 import torch.nn as nn
+import torch.nn.functional as F
+
 
 
 class Downsample(nn.Module):
@@ -35,5 +37,45 @@ class Downsample(nn.Module):
         x = self.conv2(x)
         x = self.bn2(x)
         x = self.relu(x)
+
+        return x
+
+
+class UpSample(nn.Module):
+    def __init__(self, in_channels, nu, ku=3, mode='bilinear'):
+        """
+        Args:
+            in_channels: 输入通道
+            nu: 中间层通道数
+            ku: 卷积核大小
+            mode: 上采样层合并模式, 去噪任务默认 bilinear
+        """
+        super(UpSample, self).__init__()
+        # 上采样过程先BN
+        self.bn1 = nn.BatchNorm2d(in_channels)
+        self.padder = nn.ReflectionPad2d(1)
+        self.conv1 = nn.Conv2d(in_channels, nu, kernel_size=ku, stride=1, padding=0)
+        self.bn2 = nn.BatchNorm2d(nu)
+
+        self.conv2 = nn.Conv2d(nu, nu, kernel_size=ku, stride=1, padding=0)
+        self.bn3 = nn.BatchNorm2d(nu)
+
+        self.relu = nn.LeakyReLU()
+        self.mode = mode
+
+    
+    def forward(self, x):
+        x = self.bn1(x)
+
+        x = self.padder(x)
+        x = self.conv1(x)
+        x = self.bn2(x)
+        x = self.relu(x)
+
+        x = self.conv2(x)
+        x = self.bn3(x)
+        x = self.relu(x)
+
+        x = F.interpolate(x, scale_factor=2, mode=self.mode)
 
         return x
