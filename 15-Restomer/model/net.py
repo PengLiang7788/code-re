@@ -92,3 +92,29 @@ class FeedForward(nn.Module):
         x = self.project_out(x)
 
         return x
+
+
+class TransformerBlock(nn.Module):
+    def __init__(self, dim, num_heads, expand_factor=4, bias=False):
+        """
+        标准Transformer架构
+        Args:
+            dim: 输入维度
+            num_heads: 多头的数量
+            expand_factor: 扩张因子
+            bias: 是否使用偏置
+        """
+        super(TransformerBlock, self).__init__()
+
+        # 层正则化
+        self.norm1 = nn.LayerNorm(dim)
+        self.attn = Attention(dim, num_heads, bias)
+        self.norm2 = nn.LayerNorm(dim)
+        self.ffn = FeedForward(dim, expand_factor, bias)
+
+    def forward(self, x):
+        # LN -> MDTA -> residual
+        x = x + self.attn(self.norm1(x))
+        # LN -> GDFN -> residual
+        x = x + self.ffn(self.norm2(x))
+        return x
