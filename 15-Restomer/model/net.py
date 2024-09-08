@@ -58,3 +58,37 @@ class Attention(nn.Module):
         return out
 
 
+class FeedForward(nn.Module):
+    def __init__(self, dim, expand_factor=4, bias=False):
+        """
+        Gated-DConv Feed-Forward Network
+        Args:
+            dim: 输入维度
+            expand_factor: 扩张因子
+            bias: 是否使用偏差
+        """
+        super(FeedForward, self).__init__()
+        hidden_dim = int(dim * expand_factor)
+        # point-wise convolution 1x1卷积 升维
+        self.project_in = nn.Conv2d(dim, hidden_dim * 2, kernel_size=1, bias=False)
+        # depth-wise convolution 分组卷积
+        self.dwconv = nn.Conv2d(hidden_dim * 2, hidden_dim * 2, kernel_size=3,
+                                stride=1, padding=1, bias=bias, groups=hidden_dim * 2)
+        # 1x1 convolution 降维
+        self.project_out = nn.Conv2d(hidden_dim, dim, kernel_size=1, bias=bias)
+
+    def forward(self, x):  # x: (b, c, h, w)
+        # 论文图中在这一步之前已经切成两条并行路,
+        # 但都同时进行逐点卷积和深度卷积, 将两步进行完再切分效率更高
+        # project_in: (b, c, h, w) -> (b, hidden_dim * 2, h, w)
+        x = self.project_in(x)
+        # 在通道方向上进行切分
+        # dwconv: (b, hidden_dim * 2, h, w) -> (b, hidden_dim * 2, h, w)
+        # chunk: (b, hidden_dim * 2, h, w) -> (b, hidden_dim, h, w)
+        x1, x2 = self.dwconv(x).chunk(2, dim=1)
+        # element-wise multiplication
+        x = F.gelu(x1) * x2
+        # (b, hidden_dim, h, w) -> (b, c, h, w)
+        x = self.project_out(x)
+
+        return x
