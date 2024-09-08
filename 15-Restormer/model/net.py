@@ -118,3 +118,8 @@ class TransformerBlock(nn.Module):
         # LN -> GDFN -> residual
         x = x + self.ffn(self.norm2(x))
         return x
+
+
+class Restormer(nn.Module):
+    def __init__(self, dim, num_heads, expand_factor=4, bias=False):
+        super(Restormer, self).__init__()
