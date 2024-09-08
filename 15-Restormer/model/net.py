@@ -120,6 +120,63 @@ class TransformerBlock(nn.Module):
         return x
 
 
+class Downsample(nn.Module):
+    def __init__(self, dim, downscale_factor=2):
+        """
+        下采样操作, 使用pixel-unshuffle
+        Args:
+            dim: 输入通道数
+            downscale_factor: 下采样倍数
+        """
+        super(Downsample, self).__init__()
+        self.down = nn.Sequential(
+            nn.Conv2d(dim, dim // 2, kernel_size=3, stride=1, padding=1, bias=False),
+            nn.PixelUnshuffle(downscale_factor)
+        )
+    
+    def forward(self, x):
+        # x: (b, c, h, w)
+        # conv2d: (b, c, h, w) -> (b, c//2, h, w)
+        # pixelUnshuffle: (b, c//2, h, w) -> (b, c*2, h/2, w/2)
+        return self.down(x)
+
+
+class Upsample(nn.Module):
+    def __init__(self, dim, upscale_factor=2):
+        """
+        上采样操作, 使用pixel-shuffle
+        Args:
+            dim: 输入通道数
+            upscale_factor: 上采样倍数
+        """
+        super(Upsample, self).__init__()
+        self.up = nn.Sequential(
+            nn.Conv2d(dim, dim * 2, kernel_size=3, stride=1, padding=1, bias=False),
+            nn.PixelShuffle(upscale_factor)
+        )
+    
+    def forward(self, x):
+        # x: (b, c, h, w)
+        # conv2d: (b, c, h, w) -> (b, c*2, h, w)
+        # pixelShuffle: (b, c*2, h, w) -> (b, c//2, h*2, w*2)
+        return self.up(x)
+
+
 class Restormer(nn.Module):
-    def __init__(self, dim, num_heads, expand_factor=4, bias=False):
+    def __init__(self, in_channels, dim, num_heads, expand_factor=4, bias=False):
+        """
+        Restormer Network
+        Args:
+            in_channels: 输入图像通道数
+            dim: 将图像转换成块嵌入维度
+            num_heads: 多头的数量
+            expand_factor: 前馈网络隐藏层扩张因子
+            bias: 是否使用偏差
+        """
         super(Restormer, self).__init__()
+        # 3x3 深度卷积
+        self.conv1 = nn.Conv2d(in_channels=dim, out_channels=dim, kernel_size=3, 
+                               stride=1, padding=1, bias=bias, groups=dim)
+        # L1 transformer block
+        self.l1 = TransformerBlock(dim=dim, num_heads=num_heads, expand_factor=expand_factor, bias=bias)
+
