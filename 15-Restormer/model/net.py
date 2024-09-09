@@ -1,6 +1,80 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+import numbers
+
+
+# (b, c, h, w) -> (b, h*w, c)
+def to_3d(x):
+    b, c = x.shape[:2]
+    x = x.reshape(b, c, -1).transpose(1, 2)
+    return x
+
+
+# (b, h*w, c) -> (b, c, h, w)
+def to_4d(x, h, w):
+    b = x.shape[0]
+    x = x.reshape(b, -1, h, w)
+    return x
+
+
+class BiasFree_LayerNorm(nn.Module):
+    def __init__(self, normalized_shape):
+        super(BiasFree_LayerNorm, self).__init__()
+        if isinstance(normalized_shape, numbers.Integral):
+            normalized_shape = (normalized_shape,)
+        normalized_shape = torch.Size(normalized_shape)
+
+        assert len(normalized_shape) == 1
+
+        self.weight = nn.Parameter(torch.ones(normalized_shape))
+        self.normalized_shape = normalized_shape
+
+    def forward(self, x):
+        # (b,h*w,c)
+        sigma = x.var(-1, keepdim=True, unbiased=False)  # 计算矩阵x沿着最后一个维度的方差
+        '''
+        var: 计算方差的函数
+        -1: 表示最后一个维度
+        keepdim=True 表示保留维度
+        unbiased = False 表示使用有偏方差的计算方式
+        '''
+        return x / torch.sqrt(sigma + 1e-5) * self.weight
+
+
+class WithBias_LayerNorm(nn.Module):
+    def __init__(self, normalized_shape):
+        super(WithBias_LayerNorm, self).__init__()
+        if isinstance(normalized_shape, numbers.Integral):
+            normalized_shape = (normalized_shape,)
+        normalized_shape = torch.Size(normalized_shape)
+
+        assert len(normalized_shape) == 1
+
+        self.weight = nn.Parameter(torch.ones(normalized_shape))
+        self.bias = nn.Parameter(torch.zeros(normalized_shape))
+        self.normalized_shape = normalized_shape
+
+    def forward(self, x):
+        mu = x.mean(-1, keepdim=True)  # 计算均值
+        sigma = x.var(-1, keepdim=True, unbiased=False)
+        return (x - mu) / torch.sqrt(sigma + 1e-5) * self.weight + self.bias  # 添加偏置
+
+
+class LayerNorm(nn.Module):  # 层归一化
+    def __init__(self, dim, LayerNorm_type):
+        super(LayerNorm, self).__init__()
+        if LayerNorm_type == 'BiasFree':
+            self.body = BiasFree_LayerNorm(dim)
+        else:
+            self.body = WithBias_LayerNorm(dim)
+
+    def forward(self, x):  # (b,c,h,w)
+        h, w = x.shape[-2:]
+        return to_4d(self.body(to_3d(x)), h, w)
+        # to_3d后：(b,h*w,c)
+        # body后：(b,h*w,c)
+        # to_4d后：(b,c,h,w)
 
 
 class Attention(nn.Module):
@@ -95,7 +169,7 @@ class FeedForward(nn.Module):
 
 
 class TransformerBlock(nn.Module):
-    def __init__(self, dim, num_heads, expand_factor=4, bias=False):
+    def __init__(self, dim, num_heads, expand_factor=4, bias=False, LayerNorm_type='WithBias'):
         """
         标准Transformer架构
         Args:
@@ -103,13 +177,14 @@ class TransformerBlock(nn.Module):
             num_heads: 多头的数量
             expand_factor: 扩张因子
             bias: 是否使用偏置
+            LayerNorm_type: 层归一化类型
         """
         super(TransformerBlock, self).__init__()
 
         # 层正则化
-        self.norm1 = nn.LayerNorm(dim)
+        self.norm1 = LayerNorm(dim, LayerNorm_type)
         self.attn = Attention(dim, num_heads, bias)
-        self.norm2 = nn.LayerNorm(dim)
+        self.norm2 = LayerNorm(dim, LayerNorm_type)
         self.ffn = FeedForward(dim, expand_factor, bias)
 
     def forward(self, x):
@@ -133,7 +208,7 @@ class Downsample(nn.Module):
             nn.Conv2d(dim, dim // 2, kernel_size=3, stride=1, padding=1, bias=False),
             nn.PixelUnshuffle(downscale_factor)
         )
-    
+
     def forward(self, x):
         # x: (b, c, h, w)
         # conv2d: (b, c, h, w) -> (b, c//2, h, w)
@@ -154,7 +229,7 @@ class Upsample(nn.Module):
             nn.Conv2d(dim, dim * 2, kernel_size=3, stride=1, padding=1, bias=False),
             nn.PixelShuffle(upscale_factor)
         )
-    
+
     def forward(self, x):
         # x: (b, c, h, w)
         # conv2d: (b, c, h, w) -> (b, c*2, h, w)
@@ -163,20 +238,133 @@ class Upsample(nn.Module):
 
 
 class Restormer(nn.Module):
-    def __init__(self, in_channels, dim, num_heads, expand_factor=4, bias=False):
+    def __init__(self, in_channels=3, dim=48, num_heads=[1, 2, 4, 8],
+                 ffn_expansion_factor=2.66, bias=False,
+                 num_blocks=[4, 6, 6, 8], num_refinement_blocks=4):
         """
         Restormer Network
         Args:
             in_channels: 输入图像通道数
             dim: 将图像转换成块嵌入维度
             num_heads: 多头的数量
-            expand_factor: 前馈网络隐藏层扩张因子
+            ffn_expansion_factor: 前馈网络隐藏层扩张因子
             bias: 是否使用偏差
+            num_blocks: 每个transformer block个数
+            num_refinement_blocks: 最后一个transformer block个数
         """
         super(Restormer, self).__init__()
-        # 3x3 深度卷积
-        self.conv1 = nn.Conv2d(in_channels=dim, out_channels=dim, kernel_size=3, 
-                               stride=1, padding=1, bias=bias, groups=dim)
-        # L1 transformer block
-        self.l1 = TransformerBlock(dim=dim, num_heads=num_heads, expand_factor=expand_factor, bias=bias)
+        # 3x3 patch-embed
+        self.patch_embed = nn.Conv2d(in_channels=in_channels, out_channels=dim,
+                                     kernel_size=3, stride=1, padding=1, bias=bias)
 
+        # L1 transformer encoder
+        self.encoder_l1 = nn.Sequential(
+            *[TransformerBlock(dim=dim, num_heads=num_heads[0], expand_factor=ffn_expansion_factor, bias=bias) for _ in
+              range(num_blocks[0])])
+        self.down1 = Downsample(dim)
+
+        # L2 transformer encoder
+        self.encoder_l2 = nn.Sequential(
+            *[TransformerBlock(dim=dim * 2, num_heads=num_heads[1], expand_factor=ffn_expansion_factor, bias=bias) for _
+              in range(num_blocks[1])])
+        self.down2 = Downsample(dim * 2)
+
+        # L3 transformer encoder
+        self.encoder_l3 = nn.Sequential(
+            *[TransformerBlock(dim=dim * 4, num_heads=num_heads[2], expand_factor=ffn_expansion_factor, bias=bias) for _
+              in range(num_blocks[2])])
+        self.down3 = Downsample(dim * 4)
+
+        # L4 transformer block
+        self.latent = nn.Sequential(
+            *[TransformerBlock(dim=dim * 8, num_heads=num_heads[3], expand_factor=ffn_expansion_factor, bias=bias) for _
+              in range(num_blocks[3])])
+
+        # 上采样
+        self.upsample1 = Upsample(dim=dim * 8)
+        # reduce channels
+        self.reduce1 = nn.Conv2d(in_channels=dim * 8, out_channels=dim * 4, kernel_size=1, bias=bias)
+        self.decoder_l3 = nn.Sequential(
+            *[TransformerBlock(dim=dim * 4, num_heads=num_heads[2], expand_factor=ffn_expansion_factor, bias=bias) for _
+              in range(num_blocks[2])])
+
+        # 上采样
+        self.upsample2 = Upsample(dim=dim * 4)
+        # reduce channels
+        self.reduce2 = nn.Conv2d(in_channels=dim * 4, out_channels=dim * 2, kernel_size=1, bias=bias)
+        self.decoder_l2 = nn.Sequential(
+            *[TransformerBlock(dim=dim * 2, num_heads=num_heads[1], expand_factor=ffn_expansion_factor, bias=bias) for _
+              in range(num_blocks[1])])
+
+        # 上采样
+        self.upsample3 = Upsample(dim=dim * 2)
+        self.decoder_l1 = nn.Sequential(
+            *[TransformerBlock(dim=dim * 2, num_heads=num_heads[0], expand_factor=ffn_expansion_factor, bias=bias) for _
+              in range(num_blocks[0])])
+
+        # refinement
+        self.refinement = nn.Sequential(
+            *[TransformerBlock(dim=dim * 2, num_heads=num_heads[0], expand_factor=ffn_expansion_factor, bias=bias) for _
+              in range(num_refinement_blocks)])
+
+        self.output = nn.Conv2d(in_channels=dim * 2, out_channels=3, kernel_size=3, stride=1, padding=1, bias=bias)
+
+    def forward(self, x):  # (b, 3, h, w)
+        # (b, c, h, w)
+        in_enc_level1 = self.patch_embed(x)
+        # encoder level1 (b, c, h, w)
+        out_enc_level1 = self.encoder_l1(in_enc_level1)
+        # downsample (b, 2c, h/2, w/2)
+        in_enc_level2 = self.down1(out_enc_level1)
+        # encoder level2 (b, 2c, h/2, w/2)
+        out_enc_level2 = self.encoder_l2(in_enc_level2)
+        # downsample (b, 4c, h/4, w/4)
+        in_enc_level3 = self.down2(out_enc_level2)
+        # encoder level3 (b, 4c, h/4, w/4)
+        out_enc_level3 = self.encoder_l3(in_enc_level3)
+        # downsample (b, 8c, h/8, w/8)
+        in_enc_level4 = self.down3(out_enc_level3)
+        # level4 (b, c*8, h/8, w/8)
+        latent = self.latent(in_enc_level4)
+
+        # upsample (b, c*4, h/4, w/4)
+        in_dec_level3 = self.upsample1(latent)
+        # concat (b, c*8, h/4, w/4)
+        in_dec_level3 = torch.cat([out_enc_level3, in_dec_level3], dim=1)
+        # reduce dimension (b, c*4, h/4, w/4)
+        in_dec_level3 = self.reduce1(in_dec_level3)
+        # decoder level3 (b, c*4, h/4, w/4)
+        out_dec_level3 = self.decoder_l3(in_dec_level3)
+
+        # upsample (b, c*2, h/2, w/2)
+        in_dec_level2 = self.upsample2(out_dec_level3)
+        # concat (b, c*4, h/2, w/2)
+        in_dec_level2 = torch.cat([out_enc_level2, in_dec_level2], dim=1)
+        # reduce dimension (b, c*2, h/2, w/2)
+        in_dec_level2 = self.reduce2(in_dec_level2)
+        # decoder level2 (b, c*2, h/2, w/2)
+        out_dec_level2 = self.decoder_l2(in_dec_level2)
+
+        # upsample (b, c, h, w)
+        in_dec_level1 = self.upsample3(out_dec_level2)
+        # concat (b, 2c, h, w)
+        in_dec_level1 = torch.cat([out_enc_level1, in_dec_level1], dim=1)
+        # decoder level1 (b, 2c, h, w)
+        out_dec_level1 = self.decoder_l1(in_dec_level1)
+
+        # refinement (b, 2c, h, w)
+        refinement = self.refinement(out_dec_level1)
+
+        # output (b, 3, h, w)
+        output = self.output(refinement)
+
+        return output + x
+
+
+if __name__ == "__main__":
+    model = Restormer()
+    print(model)
+
+    x = torch.randn((1, 3, 64, 64))
+    x = model(x)
+    print(x.shape)
